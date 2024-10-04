@@ -33,15 +33,14 @@ class Transformer(nn.Module):
             return self.linear(decoder_out)   
     def inference(self, x, id_token_end, max_length = 300):
         #x is [batch, sequence_length]
-        is_complete = torch.tensor([0 for i in range(x.shape[0])])
-        indices = torch.tensor([i for i in range(x.shape[0])], dtype= torch.int64)
-        indices_cache = torch.tensor([i for i in range(x.shape[0])])
-        results = [torch.tensor([1]) for i in range(x.shape[0])]
+        is_complete = torch.tensor([0 for i in range(x.shape[0])], device= self.device)
+        indices = torch.tensor([i for i in range(x.shape[0])], dtype= torch.int64, device= self.device)
+        results = [torch.tensor([1], device= self.device) for i in range(x.shape[0])]
         with torch.no_grad():
             inp_embed = self.dropout(self.inp_embed(x))
             padding_mask_enc = LookAheadMask.padding_mask(x)
             encoder_out = self.encoder(inp_embed, padding_mask_enc)
-            out_embed = self.dropout(self.out_embed(torch.tensor([1], dtype= torch.int64).repeat([x.shape[0], 1])))                  
+            out_embed = self.dropout(self.out_embed(torch.tensor([1], dtype= torch.int64, device= self.device).repeat([x.shape[0], 1])))                  
             k_caches = None
             v_caches = None
             for j in range(max_length):  
@@ -52,20 +51,20 @@ class Transformer(nn.Module):
                 else:
                     out = self.linear(decoder_out)
                 out = torch.argmax(out, dim = -1, keepdim= False).type(torch.int64)
-                indices_tmp = torch.tensor([], dtype= torch.int64)
-                indices_out = torch.tensor([], dtype= torch.int64)
-                k_caches_tmp = torch.tensor([], dtype= torch.float32 )
-                v_caches_tmp = torch.tensor([], dtype= torch.float32 )
-                encoder_out_tmp = torch.tensor([], dtype= torch.float32)
-                x_tmp = torch.tensor([], dtype = torch.int64)
+                indices_tmp = torch.tensor([], dtype= torch.int64, device=self.device)
+                indices_out = torch.tensor([], dtype= torch.int64, device=self.device)
+                k_caches_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                v_caches_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                encoder_out_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                x_tmp = torch.tensor([], dtype = torch.int64, device=self.device)
                 for i in range(out.shape[0]):
                     if is_complete[indices[i]] == 0:
                         results[indices[i]] = torch.cat([results[indices[i]], out[i]], dim = 0)
                     if out[i] == id_token_end:
                         is_complete[indices[i]] = 1    
                     else:
-                        indices_tmp = torch.cat([indices_tmp, torch.tensor([indices[i]], dtype= torch.int64)], dim = 0)    
-                        indices_out = torch.cat([indices_out, torch.tensor([i], dtype = torch.int64)], dim = 0)
+                        indices_tmp = torch.cat([indices_tmp, torch.tensor([indices[i]], dtype= torch.int64, device=self.device)], dim = 0)    
+                        indices_out = torch.cat([indices_out, torch.tensor([i], dtype = torch.int64, device=self.device)], dim = 0)
                         k_caches_tmp = torch.cat([k_caches_tmp, k_caches[i,:,:,:,:].unsqueeze(0)], dim = 0)
                         v_caches_tmp = torch.cat([v_caches_tmp, v_caches[i,:,:,:,:].unsqueeze(0)], dim = 0)
                         encoder_out_tmp = torch.cat([encoder_out_tmp, encoder_out[i,:,:].unsqueeze(0)], dim = 0)
@@ -116,15 +115,15 @@ class TransformerParallel(nn.Module):
             return torch.matmul(decoder_out ,self.E_embed.map.weight.t())                  
     
     def inference(self, x, id_token_end, inp = 'E', max_length = 300):
-        is_complete = torch.tensor([0 for i in range(x.shape[0])])
-        indices = torch.tensor([i for i in range(x.shape[0])], dtype= torch.int64)
-        results = [torch.tensor([1]) for i in range(x.shape[0])]             
+        is_complete = torch.tensor([0 for i in range(x.shape[0])], device=self.device)
+        indices = torch.tensor([i for i in range(x.shape[0])], dtype= torch.int64, device=self.device)
+        results = [torch.tensor([1], device=self.device) for i in range(x.shape[0])]             
         with torch.no_grad():
             if inp == 'E':
                 inp_embed = self.dropout(self.E_embed(x))
                 padding_mask_enc = LookAheadMask.padding_mask(x)
                 encoder_out,_,_ = self.SpeE(inp_embed, is_encode = True, padding_mask = padding_mask_enc)
-                out_embed = self.dropout(self.V_embed(torch.tensor([1], dtype= torch.int64).repeat([x.shape[0], 1])))                  
+                out_embed = self.dropout(self.V_embed(torch.tensor([1], dtype= torch.int64, device=self.device).repeat([x.shape[0], 1])))                  
                 k_caches = None
                 v_caches = None
                 for j in range(max_length):  
@@ -132,20 +131,20 @@ class TransformerParallel(nn.Module):
                     decoder_out, k_caches, v_caches = self.SpeV(out_embed, False, encoder_out, None, None, padding_global_mask, True, k_caches, v_caches)
                     out = torch.matmul(decoder_out ,self.V_embed.map.weight.t())
                     out = torch.argmax(out, dim = -1, keepdim= False).type(torch.int64)
-                    indices_tmp = torch.tensor([], dtype= torch.int64)
-                    indices_out = torch.tensor([], dtype= torch.int64)
-                    k_caches_tmp = torch.tensor([], dtype= torch.float32 )
-                    v_caches_tmp = torch.tensor([], dtype= torch.float32 )
-                    encoder_out_tmp = torch.tensor([], dtype= torch.float32)
-                    x_tmp = torch.tensor([], dtype = torch.int64)
+                    indices_tmp = torch.tensor([], dtype= torch.int64, device=self.device)
+                    indices_out = torch.tensor([], dtype= torch.int64, device=self.device)
+                    k_caches_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                    v_caches_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                    encoder_out_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                    x_tmp = torch.tensor([], dtype = torch.int64, device=self.device)
                     for i in range(out.shape[0]):
                         if is_complete[indices[i]] == 0:
                             results[indices[i]] = torch.cat([results[indices[i]], out[i]], dim = 0)
                         if out[i] == id_token_end:
                             is_complete[indices[i]] = 1    
                         else:
-                            indices_tmp = torch.cat([indices_tmp, torch.tensor([indices[i]], dtype= torch.int64)], dim = 0)    
-                            indices_out = torch.cat([indices_out, torch.tensor([i], dtype = torch.int64)], dim = 0)
+                            indices_tmp = torch.cat([indices_tmp, torch.tensor([indices[i]], dtype= torch.int64, device=self.device)], dim = 0)    
+                            indices_out = torch.cat([indices_out, torch.tensor([i], dtype = torch.int64, device=self.device)], dim = 0)
                             k_caches_tmp = torch.cat([k_caches_tmp, k_caches[i,:,:,:,:].unsqueeze(0)], dim = 0)
                             v_caches_tmp = torch.cat([v_caches_tmp, v_caches[i,:,:,:,:].unsqueeze(0)], dim = 0)
                             encoder_out_tmp = torch.cat([encoder_out_tmp, encoder_out[i,:,:].unsqueeze(0)], dim = 0)
@@ -165,7 +164,7 @@ class TransformerParallel(nn.Module):
                 inp_embed = self.dropout(self.V_embed(x))
                 padding_mask_enc = LookAheadMask.padding_mask(x)
                 encoder_out,_,_ = self.SpeV(inp_embed, is_encode = True, padding_mask = padding_mask_enc)
-                out_embed = self.dropout(self.E_embed(torch.tensor([1], dtype= torch.int64).repeat([x.shape[0], 1])))                  
+                out_embed = self.dropout(self.E_embed(torch.tensor([1], dtype= torch.int64, device=self.device).repeat([x.shape[0], 1])))                  
                 k_caches = None
                 v_caches = None
                 for j in range(max_length):  
@@ -173,20 +172,20 @@ class TransformerParallel(nn.Module):
                     decoder_out, k_caches, v_caches = self.SpeE(out_embed, False, encoder_out, None, None, padding_global_mask, True, k_caches, v_caches)
                     out = torch.matmul(decoder_out ,self.E_embed.map.weight.t())
                     out = torch.argmax(out, dim = -1, keepdim= False).type(torch.int64)
-                    indices_tmp = torch.tensor([], dtype= torch.int64)
-                    indices_out = torch.tensor([], dtype= torch.int64)
-                    k_caches_tmp = torch.tensor([], dtype= torch.float32 )
-                    v_caches_tmp = torch.tensor([], dtype= torch.float32 )
-                    encoder_out_tmp = torch.tensor([], dtype= torch.float32)
-                    x_tmp = torch.tensor([], dtype = torch.int64)
+                    indices_tmp = torch.tensor([], dtype= torch.int64, device=self.device)
+                    indices_out = torch.tensor([], dtype= torch.int64, device=self.device)
+                    k_caches_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                    v_caches_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                    encoder_out_tmp = torch.tensor([], dtype= torch.float32, device=self.device)
+                    x_tmp = torch.tensor([], dtype = torch.int64, device=self.device)
                     for i in range(out.shape[0]):
                         if is_complete[indices[i]] == 0:
                             results[indices[i]] = torch.cat([results[indices[i]], out[i]], dim = 0)
                         if out[i] == id_token_end:
                             is_complete[indices[i]] = 1    
                         else:
-                            indices_tmp = torch.cat([indices_tmp, torch.tensor([indices[i]], dtype= torch.int64)], dim = 0)    
-                            indices_out = torch.cat([indices_out, torch.tensor([i], dtype = torch.int64)], dim = 0)
+                            indices_tmp = torch.cat([indices_tmp, torch.tensor([indices[i]], dtype= torch.int64, device=self.device)], dim = 0)    
+                            indices_out = torch.cat([indices_out, torch.tensor([i], dtype = torch.int64, device=self.device)], dim = 0)
                             k_caches_tmp = torch.cat([k_caches_tmp, k_caches[i,:,:,:,:].unsqueeze(0)], dim = 0)
                             v_caches_tmp = torch.cat([v_caches_tmp, v_caches[i,:,:,:,:].unsqueeze(0)], dim = 0)
                             encoder_out_tmp = torch.cat([encoder_out_tmp, encoder_out[i,:,:].unsqueeze(0)], dim = 0)
