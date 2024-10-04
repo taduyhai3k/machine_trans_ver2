@@ -23,13 +23,13 @@ class Decoder(nn.Module):
         if inference_mode:
             if k_cache is None:
                 is_First = True
-                k_cache = torch.rand(x.shape[0], self.layer, self.head, 1, self.dmodel // self.head)
+                k_cache = torch.rand(x.shape[0], self.layer, self.head, 1, self.dmodel // self.head, device=self.device)
             else:
                 k_cache = torch.cat([k_cache, torch.rand(size = [x.shape[0], self.layer, self.head, 1, self.dmodel // self.head], 
                                                          dtype = torch.float32, device = self.device)], dim = 3)    
             if v_cache is None:
                 is_First = True 
-                v_cache = torch.rand(x.shape[0], self.layer, self.head, 1, self.dmodel // self.head)  
+                v_cache = torch.rand(x.shape[0], self.layer, self.head, 1, self.dmodel // self.head, device=self.device)  
             else:
                 v_cache = torch.cat([v_cache, torch.rand(size = [x.shape[0], self.layer, self.head, 1, self.dmodel // self.head], 
                                                          dtype = torch.float32, device = self.device)], dim = 3)                     
