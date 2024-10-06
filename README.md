@@ -64,7 +64,7 @@ The models share the following hyperparameters:
 
 The models were trained for 12 epochs with a batch size of 32, using the Adam optimizer and sparse cross entropy loss with the following learning rates:
 
- ![](img\lr_scheduler.png)
+ ![](img/lr_scheduler.png)
 
  ## Main results
 For convenience, I named the models based on their tasks. The model for Vietnamese-to-English translation is called V2E, the reverse is E2V, and the model capable of both tasks is named parallel.
@@ -86,7 +86,7 @@ For the English-to-Vietnamese translation task, the following results were obtai
 | E2V      | 0.6044 | 0.7985 | 0.7984 |  
 | Parallel      | 0.5309 | 0.7157 | 0.7148 | 
 
-![](img\E2V.png)
+![](img/E2V.png)
 
 
 The results for the Vietnamese-to-English translation task are as follows:
@@ -101,7 +101,7 @@ The results for the Vietnamese-to-English translation task are as follows:
 | V2E      | 0.5795 | 0.7406 | 0.7425 |  
 | Parallel      | 0.5236 | 0.6810 | 0.6820 | 
 
-![](img\V2E.png)
+![](img/V2E.png)
 
 ## Conclusion
 Based on the metrics above, it is evident that the architectural adjustments to the model are acceptable. The model's parameters were reduced by approximately 20-30% compared to models with the same tasks and hyperparameters. Although there is a slight disadvantage in terms of Accuracy, my architecture outperforms in BLEU score and has a lower GENLEN value. Due to resource limitations, the models were only trained for 12 epochs. With more training, their performance might converge more closely
