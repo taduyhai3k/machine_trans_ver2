@@ -166,3 +166,5 @@ tmp1 = model.inference(E_tokenizer.encode(data).unsqueeze(0), 18, 300)
 # tmp is '<start> tom sẽ không ở đây vào ngày mai . tôi chắc chắn tôi chắc chắn rằng bạn rằng <end>'
 # tmp1 is '<start> tom sẽ không ở đây vào ngày mai . tôi đảm bảo bạn . <end>'
 ```
+
+Due to LFS storage limitations, I created this new repository. You can explore older commits [here](https://github.com/taduyhai3k/machine_translation_viet_eng).
